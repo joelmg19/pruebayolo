@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+import 'detection_page.dart';
+
 void main() {
   runApp(const CellSayApp());
 }
@@ -416,6 +418,12 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _abrirDeteccionObjetos() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DetectionPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -481,6 +489,10 @@ class _HomePageState extends State<HomePage> {
                         ? 'Reconocimiento de semáforos activado'
                         : 'Reconocimiento de semáforos desactivado');
                   },
+                ),
+                const SizedBox(height: 12),
+                _DetectionFeatureCard(
+                  onOpen: _abrirDeteccionObjetos,
                 ),
                 const SizedBox(height: 12),
                 _DangerCard(
@@ -636,6 +648,59 @@ class _StatusCard extends StatelessWidget {
           Text(
             description,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetectionFeatureCard extends StatelessWidget {
+  final VoidCallback onOpen;
+
+  const _DetectionFeatureCard({required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    return _BaseCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.camera_alt, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Detección con cámara en vivo',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Abre la cámara para detectar objetos en tiempo real con YOLO11n y recibir una estimación de distancia.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: onOpen,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blueAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Abrir cámara de detección'),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Las distancias son aproximadas y dependen del tamaño del objeto en pantalla.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
           ),
         ],
       ),

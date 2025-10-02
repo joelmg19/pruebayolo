@@ -22,10 +22,12 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
+<key>LSRequiresIPhoneOS</key>
+<true/>
+<key>NSCameraUsageDescription</key>
+<string>Necesitamos acceder a la cámara para detectar objetos en tiempo real.</string>
+<key>UILaunchStoryboardName</key>
+<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>
