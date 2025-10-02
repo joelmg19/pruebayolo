@@ -236,7 +236,10 @@ class _DetectionPageState extends State<DetectionPage>
 
       _interpreter!.run(inputBuffer.buffer, outputBuffer.buffer);
 
-      final detections = _parseDetections(_extractOutputData(outputBuffer, outputTensor.type), outputTensor.shape);
+      final detections = _parseDetections(
+        _extractOutputData(outputBuffer, outputTensor.type),
+        outputTensor.shape,
+      );
       if (mounted) {
         setState(() {
           _results = detections;
@@ -394,18 +397,18 @@ class _DetectionPageState extends State<DetectionPage>
   TypedData _createOutputBuffer(Tensor outputTensor) {
     final int elementCount = outputTensor.shape.fold<int>(1, (value, element) => value * element);
     switch (outputTensor.type) {
-      case TfLiteType.float32:
+      case TensorType.float32:
         return Float32List(elementCount);
-      case TfLiteType.int32:
+      case TensorType.int32:
         return Int32List(elementCount);
-      case TfLiteType.uint8:
+      case TensorType.uint8:
         return Uint8List(elementCount);
       default:
         throw UnsupportedError('Tipo de tensor no soportado: ${outputTensor.type}');
     }
   }
 
-  List<double> _extractOutputData(TypedData buffer, TfLiteType type) {
+  List<double> _extractOutputData(TypedData buffer, TensorType type) {
     if (buffer is Float32List) {
       return List<double>.generate(buffer.length, (index) => buffer[index].toDouble());
     }
@@ -450,7 +453,7 @@ class _DetectionPageState extends State<DetectionPage>
         g = g.clamp(0, 255);
         b = b.clamp(0, 255);
 
-        img.setPixelRgba(x, y, r, g, b);
+        img.setPixelRgba(x, y, r, g, b, 255);
       }
     }
 
