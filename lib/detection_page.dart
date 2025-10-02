@@ -6,7 +6,6 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as image_lib;
 import 'package:tflite_flutter/tflite_flutter.dart';
-import 'package:tflite_flutter_helper/tflite_flutter_helper.dart';
 
 class DetectionPage extends StatefulWidget {
   const DetectionPage({super.key});
@@ -108,8 +107,6 @@ class _DetectionPageState extends State<DetectionPage>
 
   CameraController? _cameraController;
   Interpreter? _interpreter;
-  TensorImage? _inputImage;
-  ImageProcessor? _imageProcessor;
   List<DetectionResult> _results = const [];
   bool _isBusy = false;
   bool _initializing = true;
@@ -169,11 +166,6 @@ class _DetectionPageState extends State<DetectionPage>
   Future<void> _loadModel() async {
     final options = InterpreterOptions()..threads = 2;
     _interpreter = await Interpreter.fromAsset('models/yolo11n.tflite', options: options);
-    _inputImage = TensorImage(TfLiteType.float32);
-    _imageProcessor = ImageProcessorBuilder()
-        .add(ResizeOp(_inputSize, _inputSize, ResizeMethod.bilinear))
-        .add(NormalizeOp(0, 255))
-        .build();
   }
 
   Future<void> _initializeCamera() async {
@@ -224,23 +216,27 @@ class _DetectionPageState extends State<DetectionPage>
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
-    if (_interpreter == null || _imageProcessor == null || _inputImage == null || _isBusy) {
+    if (_interpreter == null || _isBusy) {
       return;
     }
     _isBusy = true;
 
     try {
       final imageLib = _convertYUV420ToImage(image);
-      final tensorImage = _inputImage!;
-      tensorImage.loadImage(image_lib.copyResize(imageLib, width: _inputSize, height: _inputSize));
-      final processedImage = _imageProcessor!.process(tensorImage);
+      final resizedImage = image_lib.copyResize(
+        imageLib,
+        width: _inputSize,
+        height: _inputSize,
+        interpolation: image_lib.Interpolation.linear,
+      );
+      final inputBuffer = _convertImageToFloat32(resizedImage);
 
       final outputTensor = _interpreter!.getOutputTensor(0);
-      final outputBuffer = TensorBuffer.createFixedSize(outputTensor.shape, outputTensor.type);
+      final outputBuffer = _createOutputBuffer(outputTensor);
 
-      _interpreter!.run(processedImage.buffer, outputBuffer.buffer);
+      _interpreter!.run(inputBuffer.buffer, outputBuffer.buffer);
 
-      final detections = _parseDetections(outputBuffer.getDoubleList(), outputTensor.shape);
+      final detections = _parseDetections(_extractOutputData(outputBuffer, outputTensor.type), outputTensor.shape);
       if (mounted) {
         setState(() {
           _results = detections;
@@ -375,6 +371,51 @@ class _DetectionPageState extends State<DetectionPage>
     final double areaB = b.width * b.height;
     final double unionArea = areaA + areaB - intersectionArea;
     return unionArea <= 0 ? 0 : intersectionArea / unionArea;
+  }
+
+  Float32List _convertImageToFloat32(image_lib.Image image) {
+    final int width = image.width;
+    final int height = image.height;
+    final Float32List buffer = Float32List(width * height * 3);
+    int bufferIndex = 0;
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        final image_lib.Pixel pixel = image.getPixel(x, y);
+        buffer[bufferIndex++] = (pixel.r / 255.0).toDouble();
+        buffer[bufferIndex++] = (pixel.g / 255.0).toDouble();
+        buffer[bufferIndex++] = (pixel.b / 255.0).toDouble();
+      }
+    }
+
+    return buffer;
+  }
+
+  TypedData _createOutputBuffer(Tensor outputTensor) {
+    final int elementCount = outputTensor.shape.fold<int>(1, (value, element) => value * element);
+    switch (outputTensor.type) {
+      case TfLiteType.float32:
+        return Float32List(elementCount);
+      case TfLiteType.int32:
+        return Int32List(elementCount);
+      case TfLiteType.uint8:
+        return Uint8List(elementCount);
+      default:
+        throw UnsupportedError('Tipo de tensor no soportado: ${outputTensor.type}');
+    }
+  }
+
+  List<double> _extractOutputData(TypedData buffer, TfLiteType type) {
+    if (buffer is Float32List) {
+      return List<double>.generate(buffer.length, (index) => buffer[index].toDouble());
+    }
+    if (buffer is Int32List) {
+      return List<double>.generate(buffer.length, (index) => buffer[index].toDouble());
+    }
+    if (buffer is Uint8List) {
+      return List<double>.generate(buffer.length, (index) => buffer[index].toDouble());
+    }
+    throw UnsupportedError('Tipo de datos de salida no soportado: $type');
   }
 
   image_lib.Image _convertYUV420ToImage(CameraImage image) {
