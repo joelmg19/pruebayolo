@@ -16,7 +16,7 @@ dependencies:
   flutter_tts: ^4.2.3
   speech_to_text: ^7.0.0
   camera: ^0.10.5+9
-  tflite_flutter: ^0.10.2
+  tflite_flutter: 0.10.2
   image: ^4.1.7
 
 dev_dependencies:
